@@ -1,9 +1,11 @@
+//go:generate go-bindata assets
+
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"image"
-	"os"
 
 	"image/color"
 	_ "image/png"
@@ -31,9 +33,9 @@ func toggleFlag(flags uint32, flag uint32, state bool) uint32 {
 }
 
 func loadTexture(filename string) (*graphics.Texture, error) {
-	if f, err := os.Open(filename); err != nil {
+	if data, err := Asset(filename); err != nil {
 		return nil, err
-	} else if img, _, err := image.Decode(f); err != nil {
+	} else if img, _, err := image.Decode(bytes.NewBuffer(data)); err != nil {
 		return nil, err
 	} else {
 		return graphics.NewTextureFromImage(img, graphics.FilterNearest), nil
@@ -44,13 +46,13 @@ func run(app pancake.App) error {
 	var sheet *graphics.Texture
 	var background graphics2d.Sprite
 
-	if tex, err := loadTexture("asteroids-arcade.png"); err != nil {
+	if tex, err := loadTexture("assets/asteroids-arcade.png"); err != nil {
 		return err
 	} else {
 		sheet = tex
 	}
 
-	if tex, err := loadTexture("background.png"); err != nil {
+	if tex, err := loadTexture("assets/background.png"); err != nil {
 		return err
 	} else {
 		background = graphics2d.NewSprite(tex, tex.Bounds())
