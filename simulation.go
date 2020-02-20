@@ -33,26 +33,26 @@ type action struct {
 }
 
 type entity struct {
-	sprite   graphics2d.Sprite // sprite
-	pos      mathx.Vec2        // position
-	vel      mathx.Vec2        // velocity
-	rot      float32           // rotation
-	rotv     float32           // rotational velocity
-	dampenv  float32           // velocity dampening
-	dampenr  float32           // rotational dampening
-	maxv     float32           // maximum velocity
-	minrotv  float32           // minimum rotational velocity
-	turn     float32           // turn rate
-	thrust   float32           // thrust speed
-	mask     uint32            // capability mask
-	radius   float32           // collision radius for COLLIDES
-	lifetime float32           // time until death in seconds, for EPHEMERAL
+	sprite   graphics.Image // sprite
+	pos      mathx.Vec2     // position
+	vel      mathx.Vec2     // velocity
+	rot      float32        // rotation
+	rotv     float32        // rotational velocity
+	dampenv  float32        // velocity dampening
+	dampenr  float32        // rotational dampening
+	maxv     float32        // maximum velocity
+	minrotv  float32        // minimum rotational velocity
+	turn     float32        // turn rate
+	thrust   float32        // thrust speed
+	mask     uint32         // capability mask
+	radius   float32        // collision radius for COLLIDES
+	lifetime float32        // time until death in seconds, for EPHEMERAL
 	pos0     mathx.Vec2
 	rot0     float32
 }
 
 type Simulation struct {
-	sprites  []graphics2d.Sprite
+	sprites  []graphics.Image
 	bounds   mathx.Rectangle
 	entities []entity
 	actions  []action
@@ -78,11 +78,11 @@ func (es *entities) at(i int) entity {
 }
 
 func (es *entities) Texture() *graphics.Texture {
-	return es.at(0).sprite.Texture
+	return es.at(0).sprite.Texture()
 }
 
-func (es entities) TextureRegionAt(i int) mathx.Aff3 {
-	return es.at(i).sprite.Region
+func (es entities) TextureRegionAt(i int) graphics.TextureRegion {
+	return es.at(i).sprite.TextureRegion()
 }
 
 func (es entities) ModelViewAt(i int) mathx.Aff3 {
@@ -90,7 +90,7 @@ func (es entities) ModelViewAt(i int) mathx.Aff3 {
 	pos := e.pos0.Lerp(e.pos, es.a)
 	rot := mathx.Lerp(e.rot0, e.rot, es.a)
 	return mathx.
-		ScaleAff3(e.sprite.Size).
+		ScaleAff3(e.sprite.Scale()).
 		Rotated(rot).
 		Translated(pos)
 }
@@ -186,7 +186,7 @@ func (s *Simulation) frame(deltaTime float32) {
 
 		e.pos = e.pos.Add(e.vel.Mul(deltaTime))
 
-		b := s.bounds.Expand(e.sprite.Size.Mul(0.5))
+		b := s.bounds.Expand(e.sprite.Scale().Mul(0.5))
 		if !e.pos.IntersectsRectangle(b) {
 			e.pos = e.pos.Wrap(b)
 			e.pos0 = e.pos

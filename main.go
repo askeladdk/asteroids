@@ -56,16 +56,16 @@ func run(app pancake.App) error {
 		background = tex
 	}
 
-	ship := graphics2d.NewSprite(sheet, image.Rect(0, 0, 32, 32))
-	asteroid := graphics2d.NewSprite(sheet, image.Rect(64, 192, 128, 256))
-	bullet := graphics2d.NewSprite(sheet, image.Rect(112, 64, 128, 80))
+	ship := sheet.SubImage(image.Rect(0, 0, 32, 32))
+	asteroid := sheet.SubImage(image.Rect(64, 192, 128, 256))
+	bullet := sheet.SubImage(image.Rect(112, 64, 128, 80))
 
 	gl.Enable(gl.BLEND)
 	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 	gl.ClearColor(0, 0, 0, 0)
 	gl.Clear(gl.COLOR_BUFFER_BIT)
 
-	resolution := app.Bounds().Size()
+	resolution := app.Resolution()
 	midscreen := mathx.FromPoint(resolution.Div(2))
 
 	drawer := graphics2d.NewDrawer(1024, graphics2d.Quad)
@@ -89,7 +89,7 @@ func run(app pancake.App) error {
 	thefont := text.NewFontFromFace(face, text.ASCII)
 
 	simulation := Simulation{
-		sprites: []graphics2d.Sprite{
+		sprites: []graphics.Image{
 			ship,
 			asteroid,
 			bullet,

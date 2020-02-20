@@ -8,7 +8,7 @@ import (
 )
 
 type StaticImage struct {
-	Image    *graphics.Texture
+	Image    graphics.Image
 	Position mathx.Vec2
 }
 
@@ -21,16 +21,16 @@ func (si StaticImage) ColorAt(i int) color.NRGBA {
 }
 
 func (si StaticImage) Texture() *graphics.Texture {
-	return si.Image
+	return si.Image.Texture()
 }
 
-func (si StaticImage) TextureRegionAt(i int) mathx.Aff3 {
-	return mathx.IdentAff3()
+func (si StaticImage) TextureRegionAt(i int) graphics.TextureRegion {
+	return si.Image.TextureRegion()
 }
 
 func (si StaticImage) ModelViewAt(i int) mathx.Aff3 {
 	return mathx.
-		ScaleAff3(mathx.FromPoint(si.Image.Bounds().Size())).
+		ScaleAff3(si.Image.Scale()).
 		Translated(si.Position)
 }
 
