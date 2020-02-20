@@ -22,8 +22,12 @@ type GameScreen struct {
 	keys       uint32
 }
 
-func (g *GameScreen) Begin() {}
-func (g *GameScreen) End()   {}
+func (g *GameScreen) Begin() {
+	g.sim.Reset()
+	g.sim.SpawnSpaceship()
+}
+
+func (g *GameScreen) End() {}
 
 func (g *GameScreen) Key(ev pancake.KeyEvent) error {
 	switch ev.Key {
@@ -43,12 +47,12 @@ func (g *GameScreen) Key(ev pancake.KeyEvent) error {
 		g.keys = toggleFlag(g.keys, 4, ev.Flags.Down())
 	case input.KeyP:
 		if ev.Flags.Pressed() {
-			g.sim.spawnAsteroid()
+			g.sim.SpawnAsteroid()
 		}
 	case input.KeySpace:
 		if ev.Flags.Pressed() {
-			e := g.sim.at(SHIPID)
-			g.sim.spawnBullet(e.pos, e.rot)
+			e := g.sim.At(SHIPID)
+			g.sim.SpawnBullet(e.Pos, e.Rot)
 		}
 	}
 	return nil
@@ -56,16 +60,16 @@ func (g *GameScreen) Key(ev pancake.KeyEvent) error {
 
 func (g *GameScreen) Frame(ev pancake.FrameEvent) (Screen, error) {
 	if g.keys&3 == 1 {
-		g.sim.action(action{SHIPID, TURN, -1})
+		g.sim.Action(SHIPID, TURN, -1)
 	} else if g.keys&3 == 2 {
-		g.sim.action(action{SHIPID, TURN, +1})
+		g.sim.Action(SHIPID, TURN, +1)
 	}
 
 	if g.keys&4 != 0 {
-		g.sim.action(action{SHIPID, FORWARD, 1})
+		g.sim.Action(SHIPID, FORWARD, 1)
 	}
 
-	g.sim.frame(float32(ev.DeltaTime))
+	g.sim.Frame(float32(ev.DeltaTime))
 
 	g.fpstext.Clear()
 	g.fpstext.Color = color.NRGBA{255, 255, 255, 255}
@@ -81,12 +85,17 @@ func (g *GameScreen) Draw(ev pancake.DrawEvent) error {
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 	g.shader.Begin()
 	g.drawer.Draw(g.background)
-	g.drawer.Draw(g.sim.batches(float32(ev.Alpha))...)
+	g.sim.Alpha = float32(ev.Alpha)
+	g.drawer.Draw(g.sim)
 	g.drawer.Draw(g.fpstext)
 	g.shader.End()
 	return nil
 }
 
-var (
-	gameScreen *GameScreen
-)
+func toggleFlag(flags uint32, flag uint32, state bool) uint32 {
+	if state {
+		return flags | flag
+	} else {
+		return flags &^ flag
+	}
+}

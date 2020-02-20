@@ -22,13 +22,9 @@ import (
 	"github.com/askeladdk/pancake"
 )
 
-func toggleFlag(flags uint32, flag uint32, state bool) uint32 {
-	if state {
-		return flags | flag
-	} else {
-		return flags &^ flag
-	}
-}
+var (
+	gameScreen *GameScreen
+)
 
 func loadTexture(filename string) (*graphics.Texture, error) {
 	if data, err := Asset(filename); err != nil {
@@ -55,10 +51,6 @@ func run(app pancake.App) error {
 	} else {
 		background = tex
 	}
-
-	ship := sheet.SubImage(image.Rect(0, 0, 32, 32))
-	asteroid := sheet.SubImage(image.Rect(64, 192, 128, 256))
-	bullet := sheet.SubImage(image.Rect(112, 64, 128, 80))
 
 	gl.Enable(gl.BLEND)
 	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
@@ -89,30 +81,15 @@ func run(app pancake.App) error {
 	thefont := text.NewFontFromFace(face, text.ASCII)
 
 	simulation := Simulation{
-		sprites: []graphics.Image{
-			ship,
-			asteroid,
-			bullet,
+		ImageAtlas: sheet,
+		Images: []graphics.Image{
+			sheet.SubImage(image.Rect(0, 0, 32, 32)),
+			sheet.SubImage(image.Rect(64, 192, 128, 256)),
+			sheet.SubImage(image.Rect(112, 64, 128, 80)),
 		},
-		bounds: mathx.Rectangle{
+		Bounds: mathx.Rectangle{
 			mathx.Vec2{},
 			mathx.FromPoint(resolution),
-		},
-		entities: []entity{
-			entity{
-				sprite:  ship,
-				pos0:    midscreen,
-				pos:     midscreen,
-				rot:     -mathx.Tau / 4,
-				minrotv: 1,
-				maxv:    300,
-				turn:    mathx.Tau / 4,
-				thrust:  100,
-				dampenr: 0.95,
-				dampenv: 0.99,
-				mask:    SPACESHIP,
-				radius:  14,
-			},
 		},
 	}
 

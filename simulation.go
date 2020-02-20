@@ -5,7 +5,6 @@ import (
 	"math/rand"
 
 	"github.com/askeladdk/pancake/graphics"
-	"github.com/askeladdk/pancake/graphics2d"
 	"github.com/askeladdk/pancake/mathx"
 )
 
@@ -17,112 +16,113 @@ const (
 	SPACESHIP
 )
 
+const (
+	ImageShip = iota
+	ImageAsteroid
+	ImageBullet
+)
+
 const SHIPID = 0
 
-type actionCode int
+type ActionCode int
 
 const (
-	FORWARD actionCode = iota
+	FORWARD ActionCode = iota
 	TURN
 )
 
-type action struct {
-	entityId int
-	code     actionCode
-	value    float32
+type Action struct {
+	EntityId int
+	Code     ActionCode
+	Value    float32
 }
 
-type entity struct {
-	sprite   graphics.Image // sprite
-	pos      mathx.Vec2     // position
-	vel      mathx.Vec2     // velocity
-	rot      float32        // rotation
-	rotv     float32        // rotational velocity
-	dampenv  float32        // velocity dampening
-	dampenr  float32        // rotational dampening
-	maxv     float32        // maximum velocity
-	minrotv  float32        // minimum rotational velocity
-	turn     float32        // turn rate
-	thrust   float32        // thrust speed
-	mask     uint32         // capability mask
-	radius   float32        // collision radius for COLLIDES
-	lifetime float32        // time until death in seconds, for EPHEMERAL
-	pos0     mathx.Vec2
-	rot0     float32
+type Entity struct {
+	ImageId  int        // image id
+	Pos      mathx.Vec2 // position
+	Vel      mathx.Vec2 // velocity
+	Rot      float32    // rotation
+	RotV     float32    // rotational velocity
+	Acc      float32    // acceleration
+	RotA     float32    // rotational acceleration
+	MaxV     float32    // maximum velocity
+	MinRotV  float32    // minimum rotational velocity
+	Turn     float32    // turn rate
+	Thrust   float32    // thrust speed
+	Mask     uint32     // capability mask
+	Radius   float32    // collision radius for COLLIDES
+	Lifetime float32    // time until death in seconds, for EPHEMERAL
+	Pos0     mathx.Vec2 // last position, for interpolation
+	Rot0     float32    // last rotation, for interpolation
 }
 
 type Simulation struct {
-	sprites  []graphics.Image
-	bounds   mathx.Rectangle
-	entities []entity
-	actions  []action
+	ImageAtlas *graphics.Texture
+	Images     []graphics.Image
+	Bounds     mathx.Rectangle
+	Entities   []Entity
+	Actions    []Action
+	Alpha      float32
 }
 
-type entities struct {
-	s *Simulation
-	i int
-	j int
-	a float32
+func (s *Simulation) Reset() {
+	s.Entities = s.Entities[:0]
 }
 
-func (es *entities) Len() int {
-	return es.j - es.i
+func (s *Simulation) Len() int {
+	return len(s.Entities)
 }
 
-func (es *entities) ColorAt(i int) color.NRGBA {
+func (s *Simulation) ColorAt(i int) color.NRGBA {
 	return color.NRGBA{0xff, 0xff, 0xff, 0xff}
 }
 
-func (es *entities) at(i int) entity {
-	return es.s.entities[es.i+i]
+func (s *Simulation) Texture() *graphics.Texture {
+	return s.ImageAtlas
 }
 
-func (es *entities) Texture() *graphics.Texture {
-	return es.at(0).sprite.Texture()
+func (s *Simulation) TextureRegionAt(i int) graphics.TextureRegion {
+	return s.Images[s.Entities[i].ImageId].TextureRegion()
 }
 
-func (es entities) TextureRegionAt(i int) graphics.TextureRegion {
-	return es.at(i).sprite.TextureRegion()
-}
-
-func (es entities) ModelViewAt(i int) mathx.Aff3 {
-	e := es.at(i)
-	pos := e.pos0.Lerp(e.pos, es.a)
-	rot := mathx.Lerp(e.rot0, e.rot, es.a)
+func (s *Simulation) ModelViewAt(i int) mathx.Aff3 {
+	e := s.At(i)
+	pos := e.Pos0.Lerp(e.Pos, s.Alpha)
+	rot := mathx.Lerp(e.Rot0, e.Rot, s.Alpha)
 	return mathx.
-		ScaleAff3(e.sprite.Scale()).
+		ScaleAff3(s.Images[e.ImageId].Scale()).
 		Rotated(rot).
 		Translated(pos)
 }
 
-func (es entities) PivotAt(i int) mathx.Vec2 {
+func (s *Simulation) PivotAt(i int) mathx.Vec2 {
 	return mathx.Vec2{}
 }
 
-func (s *Simulation) action(a action) {
-	s.actions = append(s.actions, a)
+func (s *Simulation) Action(entityId int, code ActionCode, value float32) {
+	s.Actions = append(s.Actions, Action{entityId, code, value})
 }
 
-func (s *Simulation) collisionResponse(a, b *entity) {
-	if a.mask&b.mask&ASTEROID != 0 {
-		v := a.pos.Sub(b.pos).Unit()
-		a.vel = v.Mul(a.maxv * .5)
-		b.vel = v.Mul(b.maxv * .5).Neg()
-		a.rotv += mathx.Tau / 64 * (1 + 2*rand.Float32())
-		b.rotv += mathx.Tau / 64 * (1 + 2*rand.Float32())
-	} else if (a.mask|b.mask)&(ASTEROID|BULLET) == (ASTEROID | BULLET) {
-		a.mask |= DELETED
-		b.mask |= DELETED
+func (s *Simulation) collisionResponse(a, b *Entity) {
+	if a.Mask&b.Mask&ASTEROID != 0 {
+		v := a.Pos.Sub(b.Pos).Unit()
+		a.Vel = v.Mul(a.MaxV * .5)
+		b.Vel = v.Mul(b.MaxV * .5).Neg()
+		a.RotV += mathx.Tau / 64 * (1 + 2*rand.Float32())
+		b.RotV += mathx.Tau / 64 * (1 + 2*rand.Float32())
+	} else if (a.Mask|b.Mask)&(ASTEROID|BULLET) == (ASTEROID | BULLET) {
+		a.Mask |= DELETED
+		b.Mask |= DELETED
 	}
 }
 
-func (s *Simulation) collisionDetection() {
-	for i := 0; i < len(s.entities); i++ {
-		a := s.at(i)
-		for j := i + 1; j < len(s.entities); j++ {
-			b := s.at(j)
-			c0 := mathx.Circle{a.pos, a.radius}
-			c1 := mathx.Circle{b.pos, b.radius}
+func (s *Simulation) processCollisions() {
+	for i := 0; i < len(s.Entities); i++ {
+		a := s.At(i)
+		for j := i + 1; j < len(s.Entities); j++ {
+			b := s.At(j)
+			c0 := mathx.Circle{a.Pos, a.Radius}
+			c1 := mathx.Circle{b.Pos, b.Radius}
 			if c0.IntersectsCircle(c1) {
 				s.collisionResponse(a, b)
 			}
@@ -130,26 +130,26 @@ func (s *Simulation) collisionDetection() {
 	}
 }
 
-func (s *Simulation) ephemeral(deltaTime float32) {
-	for i, _ := range s.entities {
-		e := s.at(i)
-		if e.mask&EPHEMERAL != 0 {
-			e.lifetime -= deltaTime
-			if e.lifetime <= 0 {
-				e.mask |= DELETED
+func (s *Simulation) processEphemeral(deltaTime float32) {
+	for i, _ := range s.Entities {
+		e := s.At(i)
+		if e.Mask&EPHEMERAL != 0 {
+			e.Lifetime -= deltaTime
+			if e.Lifetime <= 0 {
+				e.Mask |= DELETED
 			}
 		}
 	}
 }
 
-func (s *Simulation) deletePass() {
-	count := len(s.entities)
+func (s *Simulation) processDeletions() {
+	count := len(s.Entities)
 
 	for i := 0; i < count; {
-		if s.at(i).mask&DELETED != 0 {
+		if s.At(i).Mask&DELETED != 0 {
 			count--
-			s.entities[i] = s.entities[count]
-			s.entities = s.entities[:count]
+			s.Entities[i] = s.Entities[count]
+			s.Entities = s.Entities[:count]
 		} else {
 			i++
 		}
@@ -157,103 +157,103 @@ func (s *Simulation) deletePass() {
 }
 
 func (s *Simulation) processActions(dt float32) {
-	for _, a := range s.actions {
-		e := s.at(a.entityId)
-		switch a.code {
+	for _, a := range s.Actions {
+		e := s.At(a.EntityId)
+		switch a.Code {
 		case FORWARD:
-			acc := mathx.FromHeading(e.rot).Mul(a.value * e.thrust * dt)
-			vel := e.vel.Add(acc)
-			if vel.Len() > e.maxv {
-				vel = vel.Unit().Mul(e.maxv)
+			acc := mathx.FromHeading(e.Rot).Mul(a.Value * e.Thrust * dt)
+			vel := e.Vel.Add(acc)
+			if vel.Len() > e.MaxV {
+				vel = vel.Unit().Mul(e.MaxV)
 			}
-			e.vel = vel
+			e.Vel = vel
 		case TURN:
-			e.rotv = e.turn * a.value * dt
+			e.RotV = e.Turn * a.Value * dt
 		}
 	}
-	s.actions = s.actions[:0]
+	s.Actions = s.Actions[:0]
 }
 
-func (s *Simulation) frame(deltaTime float32) {
+func (s *Simulation) Frame(deltaTime float32) {
 	s.processActions(deltaTime)
-	s.collisionDetection()
-	s.ephemeral(deltaTime)
-	s.deletePass()
+	s.processCollisions()
+	s.processEphemeral(deltaTime)
+	s.processDeletions()
 
-	for i, e := range s.entities {
-		e.rot0 = e.rot
-		e.pos0 = e.pos
+	for i, e := range s.Entities {
+		e.Rot0 = e.Rot
+		e.Pos0 = e.Pos
 
-		e.pos = e.pos.Add(e.vel.Mul(deltaTime))
+		e.Pos = e.Pos.Add(e.Vel.Mul(deltaTime))
 
-		b := s.bounds.Expand(e.sprite.Scale().Mul(0.5))
-		if !e.pos.IntersectsRectangle(b) {
-			e.pos = e.pos.Wrap(b)
-			e.pos0 = e.pos
+		b := s.Bounds.Expand(s.Images[e.ImageId].Scale().Mul(0.5))
+		if !e.Pos.IntersectsRectangle(b) {
+			e.Pos = e.Pos.Wrap(b)
+			e.Pos0 = e.Pos
 		}
 
-		e.vel = e.vel.Mul(e.dampenv)
-		e.rotv = mathx.Clamp(e.rotv*e.dampenr, -e.minrotv, e.minrotv)
-		e.rot = e.rot + e.rotv*e.turn
-		s.entities[i] = e
+		e.Vel = e.Vel.Mul(e.Acc)
+		e.RotV = mathx.Clamp(e.RotV*e.RotA, -e.MinRotV, e.MinRotV)
+		e.Rot = e.Rot + e.RotV*e.Turn
+		s.Entities[i] = e
 	}
 }
 
-func (s *Simulation) batches(alpha float32) []graphics2d.Batch {
-	var batches []graphics2d.Batch
-
-	for i := 0; i < len(s.entities); {
-		spr := s.entities[i].sprite
-		j := i + 1
-		for ; j < len(s.entities); j++ {
-			if s.entities[j].sprite != spr {
-				break
-			}
-		}
-		batches = append(batches, &entities{s, i, j, alpha})
-		i = j
-	}
-
-	return batches
+func (s *Simulation) At(i int) *Entity {
+	return &s.Entities[i]
 }
 
-func (s *Simulation) at(i int) *entity {
-	return &s.entities[i]
-}
-
-func (s *Simulation) spawnAsteroid() {
+func (s *Simulation) SpawnAsteroid() {
 	pos := mathx.Vec2{
 		rand.Float32(),
 		rand.Float32(),
-	}.MulVec2(s.bounds.Max)
+	}.MulVec2(s.Bounds.Max)
 
-	s.entities = append(s.entities, entity{
-		sprite:  s.sprites[1],
-		pos:     pos,
-		turn:    mathx.Tau / 64 * (2*rand.Float32() - 1),
-		maxv:    100,
-		rotv:    1,
-		minrotv: rand.Float32(),
-		dampenr: 1,
-		dampenv: 1,
-		vel:     mathx.FromHeading(mathx.Tau * rand.Float32()).Mul(100),
-		mask:    ASTEROID,
-		radius:  28,
-		pos0:    pos,
+	s.Entities = append(s.Entities, Entity{
+		ImageId: ImageAsteroid,
+		Pos:     pos,
+		Turn:    mathx.Tau / 64 * (2*rand.Float32() - 1),
+		MaxV:    100,
+		RotV:    1,
+		MinRotV: rand.Float32(),
+		RotA:    1,
+		Acc:     1,
+		Vel:     mathx.FromHeading(mathx.Tau * rand.Float32()).Mul(100),
+		Mask:    ASTEROID,
+		Radius:  28,
+		Pos0:    pos,
 	})
 }
 
-func (s *Simulation) spawnBullet(pos mathx.Vec2, rot float32) {
-	s.entities = append(s.entities, entity{
-		sprite:   s.sprites[2],
-		pos:      pos,
-		dampenv:  1.01,
-		rot:      rot,
-		vel:      mathx.FromHeading(rot).Mul(200),
-		mask:     EPHEMERAL | BULLET,
-		radius:   4,
-		lifetime: 0.6,
-		pos0:     pos,
-		rot0:     rot,
+func (s *Simulation) SpawnBullet(pos mathx.Vec2, rot float32) {
+	s.Entities = append(s.Entities, Entity{
+		ImageId:  ImageBullet,
+		Pos:      pos,
+		Acc:      1.01,
+		Rot:      rot,
+		Vel:      mathx.FromHeading(rot).Mul(200),
+		Mask:     EPHEMERAL | BULLET,
+		Radius:   4,
+		Lifetime: 0.6,
+		Pos0:     pos,
+		Rot0:     rot,
+	})
+}
+
+func (s *Simulation) SpawnSpaceship() {
+	midscreen := s.Bounds.Max.Mul(0.5)
+	s.Entities = append(s.Entities, Entity{
+		ImageId: ImageShip,
+		Pos0:    midscreen,
+		Pos:     midscreen,
+		Rot:     -mathx.Tau / 4,
+		MinRotV: 1,
+		MaxV:    300,
+		Turn:    mathx.Tau / 4,
+		Thrust:  100,
+		RotA:    0.95,
+		Acc:     0.99,
+		Mask:    SPACESHIP,
+		Radius:  14,
 	})
 }
