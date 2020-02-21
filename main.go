@@ -1,4 +1,4 @@
-//go:generate go-bindata assets
+//go:generate go-bindata -nocompress assets
 
 package main
 
@@ -6,6 +6,8 @@ import (
 	"bytes"
 	"fmt"
 	"image"
+	"math/rand"
+	"time"
 
 	_ "image/png"
 
@@ -23,7 +25,9 @@ import (
 )
 
 var (
-	gameScreen *GameScreen
+	gameScreen     *GameScreen
+	gameOverScreen *GameOverScreen
+	titleScreen    *TitleScreen
 )
 
 func loadTexture(filename string) (*graphics.Texture, error) {
@@ -39,6 +43,10 @@ func loadTexture(filename string) (*graphics.Texture, error) {
 func run(app pancake.App) error {
 	var sheet *graphics.Texture
 	var background *graphics.Texture
+	var gameover *graphics.Texture
+	var title *graphics.Texture
+
+	rand.Seed(time.Now().Unix())
 
 	if tex, err := loadTexture("assets/asteroids-arcade.png"); err != nil {
 		return err
@@ -50,6 +58,18 @@ func run(app pancake.App) error {
 		return err
 	} else {
 		background = tex
+	}
+
+	if tex, err := loadTexture("assets/gameover.png"); err != nil {
+		return err
+	} else {
+		gameover = tex
+	}
+
+	if tex, err := loadTexture("assets/title.png"); err != nil {
+		return err
+	} else {
+		title = tex
 	}
 
 	gl.Enable(gl.BLEND)
@@ -83,9 +103,13 @@ func run(app pancake.App) error {
 	simulation := Simulation{
 		ImageAtlas: sheet,
 		Images: []graphics.Image{
-			sheet.SubImage(image.Rect(0, 0, 32, 32)),
-			sheet.SubImage(image.Rect(64, 192, 128, 256)),
-			sheet.SubImage(image.Rect(112, 64, 128, 80)),
+			sheet.SubImage(image.Rect(0, 0, 32, 32)),       // spaceship
+			sheet.SubImage(image.Rect(64, 192, 128, 256)),  // asteroid
+			sheet.SubImage(image.Rect(112, 64, 128, 80)),   // bullet
+			sheet.SubImage(image.Rect(128, 192, 160, 224)), // debris
+			sheet.SubImage(image.Rect(160, 192, 192, 224)),
+			sheet.SubImage(image.Rect(128, 224, 160, 256)),
+			sheet.SubImage(image.Rect(160, 224, 192, 256)),
 		},
 		Bounds: mathx.Rectangle{
 			mathx.Vec2{},
@@ -94,24 +118,54 @@ func run(app pancake.App) error {
 	}
 
 	gameScreen = &GameScreen{
-		app:     app,
-		sim:     &simulation,
-		fpstext: text.NewText(thefont),
-		drawer:  drawer,
-		shader:  shader,
-		background: StaticImage{
+		Sim:    &simulation,
+		Text:   text.NewText(thefont),
+		Drawer: drawer,
+		Shader: shader,
+		Background: StaticImage{
 			Image:    background,
+			Position: midscreen,
+		},
+	}
+
+	gameOverScreen = &GameOverScreen{
+		Sim:    &simulation,
+		Text:   text.NewText(thefont),
+		Drawer: drawer,
+		Shader: shader,
+		Background: StaticImage{
+			Image:    background,
+			Position: midscreen,
+		},
+		Title: StaticImage{
+			Image:    gameover,
+			Position: midscreen,
+		},
+	}
+
+	titleScreen = &TitleScreen{
+		Drawer: drawer,
+		Shader: shader,
+		Background: StaticImage{
+			Image:    background,
+			Position: midscreen,
+		},
+		Title: StaticImage{
+			Image:    title,
 			Position: midscreen,
 		},
 	}
 
 	screenState := ScreenState{
 		Screen: TransitionScreen{
-			To: gameScreen,
+			To: titleScreen,
 		},
 	}
 
-	return app.Events(screenState.Do)
+	return app.Events(func(event interface{}) error {
+		app.SetTitle(fmt.Sprintf("Asteroids (%d FPS)", app.FrameRate()))
+		return screenState.Do(event)
+	})
 }
 
 func main() {

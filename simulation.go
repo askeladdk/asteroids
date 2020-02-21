@@ -8,18 +8,31 @@ import (
 	"github.com/askeladdk/pancake/mathx"
 )
 
+type GameState int
+
+const (
+	PLAYING GameState = iota
+	NEXTLEVEL
+	GAMEOVER
+)
+
 const (
 	ASTEROID = 1 << iota
 	BULLET
 	DELETED
 	EPHEMERAL
 	SPACESHIP
+	DEBRIS
 )
 
 const (
 	ImageShip = iota
 	ImageAsteroid
 	ImageBullet
+	ImageDebris0
+	ImageDebris1
+	ImageDebris2
+	ImageDebris3
 )
 
 const SHIPID = 0
@@ -63,10 +76,33 @@ type Simulation struct {
 	Entities   []Entity
 	Actions    []Action
 	Alpha      float32
+	State      GameState
+	Level      int
+	Score      int
+	Remaining  int
+}
+
+var AsteroidsPerLevel = []int{
+	1,
+	2,
+	3,
+	5,
+	8,
+	13,
+	21,
+	34,
+	55,
+	89,
 }
 
 func (s *Simulation) Reset() {
+	s.State = PLAYING
+	s.Remaining = 0
 	s.Entities = s.Entities[:0]
+	s.SpawnSpaceship()
+	for i := 0; i < AsteroidsPerLevel[s.Level%len(AsteroidsPerLevel)]; i++ {
+		s.SpawnAsteroid()
+	}
 }
 
 func (s *Simulation) Len() int {
@@ -104,7 +140,7 @@ func (s *Simulation) Action(entityId int, code ActionCode, value float32) {
 }
 
 func (s *Simulation) collisionResponse(a, b *Entity) {
-	if a.Mask&b.Mask&ASTEROID != 0 {
+	if a.Mask&(ASTEROID|DEBRIS) != 0 && b.Mask&(ASTEROID|DEBRIS) != 0 {
 		v := a.Pos.Sub(b.Pos).Unit()
 		a.Vel = v.Mul(a.MaxV * .5)
 		b.Vel = v.Mul(b.MaxV * .5).Neg()
@@ -113,6 +149,21 @@ func (s *Simulation) collisionResponse(a, b *Entity) {
 	} else if (a.Mask|b.Mask)&(ASTEROID|BULLET) == (ASTEROID | BULLET) {
 		a.Mask |= DELETED
 		b.Mask |= DELETED
+		s.Score += 100
+		s.Remaining--
+		if a.Mask&ASTEROID != 0 {
+			s.SpawnDebris(a.Pos)
+		} else {
+			s.SpawnDebris(b.Pos)
+		}
+	} else if (a.Mask|b.Mask)&(DEBRIS|BULLET) == (DEBRIS | BULLET) {
+		a.Mask |= DELETED
+		b.Mask |= DELETED
+		s.Score += 25
+		s.Remaining--
+	} else if a.Mask&SPACESHIP != 0 && b.Mask&(ASTEROID|DEBRIS) != 0 {
+		a.Mask |= DELETED
+		s.State = GAMEOVER
 	}
 }
 
@@ -174,12 +225,7 @@ func (s *Simulation) processActions(dt float32) {
 	s.Actions = s.Actions[:0]
 }
 
-func (s *Simulation) Frame(deltaTime float32) {
-	s.processActions(deltaTime)
-	s.processCollisions()
-	s.processEphemeral(deltaTime)
-	s.processDeletions()
-
+func (s *Simulation) processPhysics(deltaTime float32) {
 	for i, e := range s.Entities {
 		e.Rot0 = e.Rot
 		e.Pos0 = e.Pos
@@ -199,15 +245,26 @@ func (s *Simulation) Frame(deltaTime float32) {
 	}
 }
 
+func (s *Simulation) Frame(deltaTime float32) {
+	s.processActions(deltaTime)
+	s.processCollisions()
+	s.processEphemeral(deltaTime)
+	s.processDeletions()
+	s.processPhysics(deltaTime)
+
+	if s.Remaining == 0 && s.State == PLAYING {
+		s.State = NEXTLEVEL
+	}
+}
+
 func (s *Simulation) At(i int) *Entity {
 	return &s.Entities[i]
 }
 
 func (s *Simulation) SpawnAsteroid() {
-	pos := mathx.Vec2{
-		rand.Float32(),
-		rand.Float32(),
-	}.MulVec2(s.Bounds.Max)
+	pos := s.Bounds.Max.
+		Mul(.5).
+		Add(mathx.FromHeading(mathx.Tau * rand.Float32()).Mul(128 + 128*rand.Float32()))
 
 	s.Entities = append(s.Entities, Entity{
 		ImageId: ImageAsteroid,
@@ -223,6 +280,34 @@ func (s *Simulation) SpawnAsteroid() {
 		Radius:  28,
 		Pos0:    pos,
 	})
+
+	s.Remaining++
+}
+
+func (s *Simulation) SpawnDebris(pos mathx.Vec2) {
+	for i := 0; i < 4; i++ {
+		pos0 := pos.Add(mathx.Vec2{
+			rand.Float32(),
+			rand.Float32(),
+		}.Mul(8))
+
+		s.Entities = append(s.Entities, Entity{
+			ImageId: ImageDebris0 + i,
+			Pos:     pos0,
+			Turn:    mathx.Tau / 32 * (2*rand.Float32() - 1),
+			MaxV:    150,
+			RotV:    1,
+			MinRotV: rand.Float32(),
+			RotA:    1,
+			Acc:     1,
+			Vel:     mathx.FromHeading(mathx.Tau * rand.Float32()).Mul(150),
+			Mask:    DEBRIS,
+			Radius:  14,
+			Pos0:    pos0,
+		})
+
+		s.Remaining++
+	}
 }
 
 func (s *Simulation) SpawnBullet(pos mathx.Vec2, rot float32) {

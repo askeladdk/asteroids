@@ -26,6 +26,8 @@ type ScreenState struct {
 
 func (gs *ScreenState) Do(event interface{}) error {
 	switch ev := event.(type) {
+	case pancake.QuitEvent:
+		return pancake.Quit
 	case pancake.KeyEvent:
 		return gs.Screen.Key(ev)
 	case pancake.FrameEvent:
