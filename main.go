@@ -28,6 +28,7 @@ var (
 	gameScreen     *GameScreen
 	gameOverScreen *GameOverScreen
 	titleScreen    *TitleScreen
+	nextScreen     *NextScreen
 )
 
 func loadTexture(filename string) (*graphics.Texture, error) {
@@ -45,6 +46,7 @@ func run(app pancake.App) error {
 	var background *graphics.Texture
 	var gameover *graphics.Texture
 	var title *graphics.Texture
+	var nextlevel *graphics.Texture
 
 	rand.Seed(time.Now().Unix())
 
@@ -70,6 +72,12 @@ func run(app pancake.App) error {
 		return err
 	} else {
 		title = tex
+	}
+
+	if tex, err := loadTexture("assets/nextlevel.png"); err != nil {
+		return err
+	} else {
+		nextlevel = tex
 	}
 
 	gl.Enable(gl.BLEND)
@@ -100,6 +108,8 @@ func run(app pancake.App) error {
 	})
 	thefont := text.NewFontFromFace(face, text.ASCII)
 
+	thetext := text.NewText(thefont)
+
 	simulation := Simulation{
 		ImageAtlas: sheet,
 		Images: []graphics.Image{
@@ -119,7 +129,7 @@ func run(app pancake.App) error {
 
 	gameScreen = &GameScreen{
 		Sim:    &simulation,
-		Text:   text.NewText(thefont),
+		Text:   thetext,
 		Drawer: drawer,
 		Shader: shader,
 		Background: StaticImage{
@@ -130,7 +140,7 @@ func run(app pancake.App) error {
 
 	gameOverScreen = &GameOverScreen{
 		Sim:    &simulation,
-		Text:   text.NewText(thefont),
+		Text:   thetext,
 		Drawer: drawer,
 		Shader: shader,
 		Background: StaticImage{
@@ -152,6 +162,21 @@ func run(app pancake.App) error {
 		},
 		Title: StaticImage{
 			Image:    title,
+			Position: midscreen,
+		},
+	}
+
+	nextScreen = &NextScreen{
+		Sim:    &simulation,
+		Text:   thetext,
+		Drawer: drawer,
+		Shader: shader,
+		Background: StaticImage{
+			Image:    background,
+			Position: midscreen,
+		},
+		Title: StaticImage{
+			Image:    nextlevel,
 			Position: midscreen,
 		},
 	}

@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"image/color"
 
 	"github.com/askeladdk/pancake"
 	"github.com/askeladdk/pancake/graphics"
@@ -62,8 +61,7 @@ func (g *GameScreen) Frame(ev pancake.FrameEvent) (Screen, error) {
 	case GAMEOVER:
 		return gameOverScreen, nil
 	case NEXTLEVEL:
-		g.Sim.Level++
-		return gameScreen, nil
+		return nextScreen, nil
 	}
 
 	if g.Keys&3 == 1 {
@@ -79,14 +77,7 @@ func (g *GameScreen) Frame(ev pancake.FrameEvent) (Screen, error) {
 	g.Sim.Frame(float32(ev.DeltaTime))
 
 	g.Text.Clear()
-	g.Text.Color = color.NRGBA{255, 255, 255, 255}
-	fmt.Fprintf(g.Text, "Level: ")
-	g.Text.Color = color.NRGBA{255, 0, 0, 255}
-	fmt.Fprintf(g.Text, "%d", 1+g.Sim.Level)
-	g.Text.Color = color.NRGBA{255, 255, 255, 255}
-	fmt.Fprintf(g.Text, "\nScore: ")
-	g.Text.Color = color.NRGBA{255, 0, 0, 255}
-	fmt.Fprintf(g.Text, "%d", g.Sim.Score)
+	fmt.Fprintf(g.Text, "Level: %d\nScore: %d", 1+g.Sim.Level, g.Sim.Score)
 
 	return nil, nil
 }

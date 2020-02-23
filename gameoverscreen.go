@@ -25,7 +25,7 @@ type GameOverScreen struct {
 func (s *GameOverScreen) Begin() {
 	s.Restart = false
 	s.Text.Clear()
-	fmt.Fprintf(s.Text, "Game Over :(\nFinal score: %d\nPress Enter to restart or ESC to quit.", s.Sim.Score)
+	fmt.Fprintf(s.Text, "Final level: %d\nFinal score: %d\nPress Enter to restart or ESC to quit.", 1+s.Sim.Level, s.Sim.Score)
 }
 
 func (s *GameOverScreen) End() {}
