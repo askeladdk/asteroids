@@ -236,6 +236,10 @@ func (s *Simulation) processActions(dt float32) {
 		case FIRE:
 			s.SpawnBullet(e.Pos, e.Rot)
 			s.PlaySound(0)
+			s.Score -= 5
+			if s.Score < 0 {
+				s.Score = 0
+			}
 		}
 	}
 	s.Actions = s.Actions[:0]
@@ -303,7 +307,7 @@ func (s *Simulation) SpawnAsteroid() {
 func (s *Simulation) SpawnDebris(pos mathx.Vec2) {
 	for i := 0; i < 4; i++ {
 		heading := (mathx.Tau / 4) * float32(i)
-		pos0 := pos.Add(mathx.FromHeading(heading).Mul(8))
+		pos0 := pos.Add(mathx.FromHeading(heading).Mul(16))
 
 		s.Entities = append(s.Entities, Entity{
 			ImageId: ImageDebris0 + i,
