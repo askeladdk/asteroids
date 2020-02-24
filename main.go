@@ -6,8 +6,14 @@ import (
 	"bytes"
 	"fmt"
 	"image"
+	"io/ioutil"
 	"math/rand"
 	"time"
+
+	"github.com/faiface/beep"
+	"github.com/faiface/beep/mp3"
+	"github.com/faiface/beep/speaker"
+	"github.com/faiface/beep/wav"
 
 	_ "image/png"
 
@@ -41,12 +47,41 @@ func loadTexture(filename string) (*graphics.Texture, error) {
 	}
 }
 
+func loadWav(filename string) (*beep.Buffer, error) {
+	if data, err := Asset(filename); err != nil {
+		return nil, err
+	} else if wav, fmt, err := wav.Decode(bytes.NewBuffer(data)); err != nil {
+		return nil, err
+	} else {
+		buffer := beep.NewBuffer(fmt)
+		buffer.Append(wav)
+		return buffer, nil
+	}
+}
+
+func loadMp3(filename string) (*beep.Buffer, error) {
+	if data, err := Asset(filename); err != nil {
+		return nil, err
+	} else if wav, fmt, err := mp3.Decode(ioutil.NopCloser(bytes.NewBuffer(data))); err != nil {
+		return nil, err
+	} else {
+		buffer := beep.NewBuffer(fmt)
+		buffer.Append(wav)
+		return buffer, nil
+	}
+}
+
 func run(app pancake.App) error {
 	var sheet *graphics.Texture
 	var background *graphics.Texture
 	var gameover *graphics.Texture
 	var title *graphics.Texture
 	var nextlevel *graphics.Texture
+	var sfxLaser *beep.Buffer
+	var sfxExplosion *beep.Buffer
+	var sfxBoing *beep.Buffer
+
+	speaker.Init(44100, beep.SampleRate(44100).N(time.Second/10))
 
 	rand.Seed(time.Now().Unix())
 
@@ -80,6 +115,31 @@ func run(app pancake.App) error {
 		nextlevel = tex
 	}
 
+	if wav, err := loadWav("assets/Laser.wav"); err != nil {
+		return err
+	} else {
+		sfxLaser = wav
+	}
+
+	if wav, err := loadWav("assets/Explosion.wav"); err != nil {
+		return err
+	} else {
+		sfxExplosion = wav
+	}
+
+	if wav, err := loadWav("assets/Boing.wav"); err != nil {
+		return err
+	} else {
+		sfxBoing = wav
+	}
+
+	if mp3, err := loadMp3("assets/Bonkers-for-Arcades.mp3"); err != nil {
+		return err
+	} else {
+		stream := mp3.Streamer(0, mp3.Len())
+		speaker.Play(beep.Loop(-1, stream))
+	}
+
 	gl.Enable(gl.BLEND)
 	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 	gl.ClearColor(0, 0, 0, 0)
@@ -101,14 +161,22 @@ func run(app pancake.App) error {
 
 	// load the font
 	ttf, _ := truetype.Parse(goregular.TTF)
-	face := truetype.NewFace(ttf, &truetype.Options{
+	face16 := truetype.NewFace(ttf, &truetype.Options{
 		Size:    16,
 		DPI:     72,
 		Hinting: font.HintingFull,
 	})
-	thefont := text.NewFontFromFace(face, text.ASCII)
+	font16 := text.NewFontFromFace(face16, text.ASCII)
 
-	thetext := text.NewText(thefont)
+	face12 := truetype.NewFace(ttf, &truetype.Options{
+		Size:    12,
+		DPI:     72,
+		Hinting: font.HintingFull,
+	})
+	font12 := text.NewFontFromFace(face12, text.ASCII)
+
+	text16 := text.NewText(font16)
+	text12 := text.NewText(font12)
 
 	simulation := Simulation{
 		ImageAtlas: sheet,
@@ -121,6 +189,11 @@ func run(app pancake.App) error {
 			sheet.SubImage(image.Rect(128, 224, 160, 256)),
 			sheet.SubImage(image.Rect(160, 224, 192, 256)),
 		},
+		Sounds: []*beep.Buffer{
+			sfxLaser,
+			sfxExplosion,
+			sfxBoing,
+		},
 		Bounds: mathx.Rectangle{
 			mathx.Vec2{},
 			mathx.FromPoint(resolution),
@@ -129,7 +202,7 @@ func run(app pancake.App) error {
 
 	gameScreen = &GameScreen{
 		Sim:    &simulation,
-		Text:   thetext,
+		Text:   text16,
 		Drawer: drawer,
 		Shader: shader,
 		Background: StaticImage{
@@ -140,7 +213,7 @@ func run(app pancake.App) error {
 
 	gameOverScreen = &GameOverScreen{
 		Sim:    &simulation,
-		Text:   thetext,
+		Text:   text16,
 		Drawer: drawer,
 		Shader: shader,
 		Background: StaticImage{
@@ -156,6 +229,7 @@ func run(app pancake.App) error {
 	titleScreen = &TitleScreen{
 		Drawer: drawer,
 		Shader: shader,
+		Text:   text12,
 		Background: StaticImage{
 			Image:    background,
 			Position: midscreen,
@@ -168,7 +242,7 @@ func run(app pancake.App) error {
 
 	nextScreen = &NextScreen{
 		Sim:    &simulation,
-		Text:   thetext,
+		Text:   text16,
 		Drawer: drawer,
 		Shader: shader,
 		Background: StaticImage{

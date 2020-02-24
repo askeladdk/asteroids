@@ -26,7 +26,7 @@ func (s *NextScreen) Begin() {
 	s.Sim.Level++
 
 	s.Text.Clear()
-	fmt.Fprintf(s.Text, "Level: %d\nScore: %d\nPress Enter to start.", 1+s.Sim.Level, s.Sim.Score)
+	fmt.Fprintf(s.Text, "Level: %d\nScore: %d\nPress Enter to continue.", 1+s.Sim.Level, s.Sim.Score)
 }
 
 func (s *NextScreen) End() {}

@@ -6,6 +6,8 @@ import (
 
 	"github.com/askeladdk/pancake/graphics"
 	"github.com/askeladdk/pancake/mathx"
+	"github.com/faiface/beep"
+	"github.com/faiface/beep/speaker"
 )
 
 type GameState int
@@ -42,6 +44,7 @@ type ActionCode int
 const (
 	FORWARD ActionCode = iota
 	TURN
+	FIRE
 )
 
 type Action struct {
@@ -72,6 +75,7 @@ type Entity struct {
 type Simulation struct {
 	ImageAtlas *graphics.Texture
 	Images     []graphics.Image
+	Sounds     []*beep.Buffer
 	Bounds     mathx.Rectangle
 	Entities   []Entity
 	Actions    []Action
@@ -93,6 +97,11 @@ var AsteroidsPerLevel = []int{
 	34,
 	55,
 	89,
+}
+
+func (s *Simulation) PlaySound(i int) {
+	snd := s.Sounds[i]
+	speaker.Play(snd.Streamer(0, snd.Len()))
 }
 
 func (s *Simulation) Reset() {
@@ -146,6 +155,7 @@ func (s *Simulation) collisionResponse(a, b *Entity) {
 		b.Vel = v.Mul(b.MaxV * .5).Neg()
 		a.RotV += mathx.Tau / 64 * (1 + 2*rand.Float32())
 		b.RotV += mathx.Tau / 64 * (1 + 2*rand.Float32())
+		s.PlaySound(2)
 	} else if (a.Mask|b.Mask)&(ASTEROID|BULLET) == (ASTEROID | BULLET) {
 		a.Mask |= DELETED
 		b.Mask |= DELETED
@@ -156,14 +166,17 @@ func (s *Simulation) collisionResponse(a, b *Entity) {
 		} else {
 			s.SpawnDebris(b.Pos)
 		}
+		s.PlaySound(1)
 	} else if (a.Mask|b.Mask)&(DEBRIS|BULLET) == (DEBRIS | BULLET) {
 		a.Mask |= DELETED
 		b.Mask |= DELETED
 		s.Score += 25
 		s.Remaining--
+		s.PlaySound(1)
 	} else if a.Mask&SPACESHIP != 0 && b.Mask&(ASTEROID|DEBRIS) != 0 {
 		a.Mask |= DELETED
 		s.State = GAMEOVER
+		s.PlaySound(1)
 	}
 }
 
@@ -220,6 +233,9 @@ func (s *Simulation) processActions(dt float32) {
 			e.Vel = vel
 		case TURN:
 			e.RotV = e.Turn * a.Value * dt
+		case FIRE:
+			s.SpawnBullet(e.Pos, e.Rot)
+			s.PlaySound(0)
 		}
 	}
 	s.Actions = s.Actions[:0]
@@ -286,10 +302,8 @@ func (s *Simulation) SpawnAsteroid() {
 
 func (s *Simulation) SpawnDebris(pos mathx.Vec2) {
 	for i := 0; i < 4; i++ {
-		pos0 := pos.Add(mathx.Vec2{
-			rand.Float32(),
-			rand.Float32(),
-		}.Mul(8))
+		heading := (mathx.Tau / 4) * float32(i)
+		pos0 := pos.Add(mathx.FromHeading(heading).Mul(8))
 
 		s.Entities = append(s.Entities, Entity{
 			ImageId: ImageDebris0 + i,

@@ -49,8 +49,7 @@ func (g *GameScreen) Key(ev pancake.KeyEvent) error {
 		}
 	case input.KeySpace:
 		if ev.Flags.Pressed() {
-			e := g.Sim.At(SHIPID)
-			g.Sim.SpawnBullet(e.Pos, e.Rot)
+			g.Sim.Action(SHIPID, FIRE, 0)
 		}
 	}
 	return nil
