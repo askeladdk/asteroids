@@ -190,6 +190,10 @@ func (s *Simulation) processCollisions() {
 			if c0.IntersectsCircle(c1) {
 				s.collisionResponse(a, b)
 			}
+
+			if a.Mask&DELETED != 0 {
+				break
+			}
 		}
 	}
 }
