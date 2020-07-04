@@ -118,7 +118,7 @@ func (s *Simulation) Len() int {
 	return len(s.Entities)
 }
 
-func (s *Simulation) ColorAt(i int) color.NRGBA {
+func (s *Simulation) TintColorAt(i int) color.NRGBA {
 	return color.NRGBA{0xff, 0xff, 0xff, 0xff}
 }
 
