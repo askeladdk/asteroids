@@ -140,7 +140,7 @@ func (s *Simulation) ModelViewAt(i int) mathx.Aff3 {
 		Translated(pos)
 }
 
-func (s *Simulation) PivotAt(i int) mathx.Vec2 {
+func (s *Simulation) OriginAt(i int) mathx.Vec2 {
 	return mathx.Vec2{}
 }
 

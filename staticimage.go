@@ -34,6 +34,6 @@ func (si StaticImage) ModelViewAt(i int) mathx.Aff3 {
 		Translated(si.Position)
 }
 
-func (si StaticImage) PivotAt(i int) mathx.Vec2 {
+func (si StaticImage) OriginAt(i int) mathx.Vec2 {
 	return mathx.Vec2{}
 }
