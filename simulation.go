@@ -50,26 +50,26 @@ const (
 type Action struct {
 	EntityId int
 	Code     ActionCode
-	Value    float32
+	Value    float64
 }
 
 type Entity struct {
 	ImageId  int        // image id
 	Pos      mathx.Vec2 // position
 	Vel      mathx.Vec2 // velocity
-	Rot      float32    // rotation
-	RotV     float32    // rotational velocity
-	Acc      float32    // acceleration
-	RotA     float32    // rotational acceleration
-	MaxV     float32    // maximum velocity
-	MinRotV  float32    // minimum rotational velocity
-	Turn     float32    // turn rate
-	Thrust   float32    // thrust speed
+	Rot      float64    // rotation
+	RotV     float64    // rotational velocity
+	Acc      float64    // acceleration
+	RotA     float64    // rotational acceleration
+	MaxV     float64    // maximum velocity
+	MinRotV  float64    // minimum rotational velocity
+	Turn     float64    // turn rate
+	Thrust   float64    // thrust speed
 	Mask     uint32     // capability mask
-	Radius   float32    // collision radius for COLLIDES
-	Lifetime float32    // time until death in seconds, for EPHEMERAL
+	Radius   float64    // collision radius for COLLIDES
+	Lifetime float64    // time until death in seconds, for EPHEMERAL
 	Pos0     mathx.Vec2 // last position, for interpolation
-	Rot0     float32    // last rotation, for interpolation
+	Rot0     float64    // last rotation, for interpolation
 }
 
 type Simulation struct {
@@ -79,7 +79,7 @@ type Simulation struct {
 	Bounds     mathx.Rectangle
 	Entities   []Entity
 	Actions    []Action
-	Alpha      float32
+	Alpha      float64
 	State      GameState
 	Level      int
 	Score      int
@@ -144,7 +144,11 @@ func (s *Simulation) OriginAt(i int) mathx.Vec2 {
 	return mathx.Vec2{}
 }
 
-func (s *Simulation) Action(entityId int, code ActionCode, value float32) {
+func (s *Simulation) ZOrderAt(i int) float64 {
+	return 0
+}
+
+func (s *Simulation) Action(entityId int, code ActionCode, value float64) {
 	s.Actions = append(s.Actions, Action{entityId, code, value})
 }
 
@@ -153,8 +157,8 @@ func (s *Simulation) collisionResponse(a, b *Entity) {
 		v := a.Pos.Sub(b.Pos).Unit()
 		a.Vel = v.Mul(a.MaxV * .5)
 		b.Vel = v.Mul(b.MaxV * .5).Neg()
-		a.RotV += mathx.Tau / 64 * (1 + 2*rand.Float32())
-		b.RotV += mathx.Tau / 64 * (1 + 2*rand.Float32())
+		a.RotV += mathx.Tau / 64 * (1 + 2*rand.Float64())
+		b.RotV += mathx.Tau / 64 * (1 + 2*rand.Float64())
 		s.PlaySound(2)
 	} else if (a.Mask|b.Mask)&(ASTEROID|BULLET) == (ASTEROID | BULLET) {
 		a.Mask |= DELETED
@@ -198,7 +202,7 @@ func (s *Simulation) processCollisions() {
 	}
 }
 
-func (s *Simulation) processEphemeral(deltaTime float32) {
+func (s *Simulation) processEphemeral(deltaTime float64) {
 	for i, _ := range s.Entities {
 		e := s.At(i)
 		if e.Mask&EPHEMERAL != 0 {
@@ -224,7 +228,7 @@ func (s *Simulation) processDeletions() {
 	}
 }
 
-func (s *Simulation) processActions(dt float32) {
+func (s *Simulation) processActions(dt float64) {
 	for _, a := range s.Actions {
 		e := s.At(a.EntityId)
 		switch a.Code {
@@ -249,7 +253,7 @@ func (s *Simulation) processActions(dt float32) {
 	s.Actions = s.Actions[:0]
 }
 
-func (s *Simulation) processPhysics(deltaTime float32) {
+func (s *Simulation) processPhysics(deltaTime float64) {
 	for i, e := range s.Entities {
 		e.Rot0 = e.Rot
 		e.Pos0 = e.Pos
@@ -269,7 +273,7 @@ func (s *Simulation) processPhysics(deltaTime float32) {
 	}
 }
 
-func (s *Simulation) Frame(deltaTime float32) {
+func (s *Simulation) Frame(deltaTime float64) {
 	s.processActions(deltaTime)
 	s.processCollisions()
 	s.processEphemeral(deltaTime)
@@ -288,18 +292,18 @@ func (s *Simulation) At(i int) *Entity {
 func (s *Simulation) SpawnAsteroid() {
 	pos := s.Bounds.Max.
 		Mul(.5).
-		Add(mathx.FromHeading(mathx.Tau * rand.Float32()).Mul(128 + 128*rand.Float32()))
+		Add(mathx.FromHeading(mathx.Tau * rand.Float64()).Mul(128 + 128*rand.Float64()))
 
 	s.Entities = append(s.Entities, Entity{
 		ImageId: ImageAsteroid,
 		Pos:     pos,
-		Turn:    mathx.Tau / 64 * (2*rand.Float32() - 1),
+		Turn:    mathx.Tau / 64 * (2*rand.Float64() - 1),
 		MaxV:    100,
 		RotV:    1,
-		MinRotV: rand.Float32(),
+		MinRotV: rand.Float64(),
 		RotA:    1,
 		Acc:     1,
-		Vel:     mathx.FromHeading(mathx.Tau * rand.Float32()).Mul(100),
+		Vel:     mathx.FromHeading(mathx.Tau * rand.Float64()).Mul(100),
 		Mask:    ASTEROID,
 		Radius:  28,
 		Pos0:    pos,
@@ -310,19 +314,19 @@ func (s *Simulation) SpawnAsteroid() {
 
 func (s *Simulation) SpawnDebris(pos mathx.Vec2) {
 	for i := 0; i < 4; i++ {
-		heading := (mathx.Tau / 4) * float32(i)
+		heading := (mathx.Tau / 4) * float64(i)
 		pos0 := pos.Add(mathx.FromHeading(heading).Mul(16))
 
 		s.Entities = append(s.Entities, Entity{
 			ImageId: ImageDebris0 + i,
 			Pos:     pos0,
-			Turn:    mathx.Tau / 32 * (2*rand.Float32() - 1),
+			Turn:    mathx.Tau / 32 * (2*rand.Float64() - 1),
 			MaxV:    150,
 			RotV:    1,
-			MinRotV: rand.Float32(),
+			MinRotV: rand.Float64(),
 			RotA:    1,
 			Acc:     1,
-			Vel:     mathx.FromHeading(mathx.Tau * rand.Float32()).Mul(150),
+			Vel:     mathx.FromHeading(mathx.Tau * rand.Float64()).Mul(150),
 			Mask:    DEBRIS,
 			Radius:  14,
 			Pos0:    pos0,
@@ -332,7 +336,7 @@ func (s *Simulation) SpawnDebris(pos mathx.Vec2) {
 	}
 }
 
-func (s *Simulation) SpawnBullet(pos mathx.Vec2, rot float32) {
+func (s *Simulation) SpawnBullet(pos mathx.Vec2, rot float64) {
 	s.Entities = append(s.Entities, Entity{
 		ImageId:  ImageBullet,
 		Pos:      pos,

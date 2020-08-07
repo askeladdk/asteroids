@@ -37,3 +37,7 @@ func (si StaticImage) ModelViewAt(i int) mathx.Aff3 {
 func (si StaticImage) OriginAt(i int) mathx.Vec2 {
 	return mathx.Vec2{}
 }
+
+func (si StaticImage) ZOrderAt(i int) float64 {
+	return 0
+}

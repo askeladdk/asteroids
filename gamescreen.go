@@ -73,7 +73,7 @@ func (g *GameScreen) Frame(ev pancake.FrameEvent) (Screen, error) {
 		g.Sim.Action(SHIPID, FORWARD, 1)
 	}
 
-	g.Sim.Frame(float32(ev.DeltaTime))
+	g.Sim.Frame(ev.DeltaTime)
 
 	g.Text.Clear()
 	fmt.Fprintf(g.Text, "Level: %d\nScore: %d", 1+g.Sim.Level, g.Sim.Score)
@@ -84,7 +84,7 @@ func (g *GameScreen) Frame(ev pancake.FrameEvent) (Screen, error) {
 func (g *GameScreen) Draw(ev pancake.DrawEvent) error {
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 	g.Shader.Begin()
-	g.Sim.Alpha = float32(ev.Alpha)
+	g.Sim.Alpha = ev.Alpha
 	g.Drawer.Draw(g.Background,
 		g.Sim,
 		g.Text,

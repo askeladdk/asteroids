@@ -153,8 +153,8 @@ func run(app pancake.App) error {
 	shader.Begin()
 	shader.SetUniform("u_Projection", mathx.Ortho2D(
 		0,
-		float32(resolution.X),
-		float32(resolution.Y),
+		float64(resolution.X),
+		float64(resolution.Y),
 		0,
 	))
 	shader.End()
