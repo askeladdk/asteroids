@@ -140,8 +140,6 @@ func run(app pancake.App) error {
 		speaker.Play(beep.Loop(-1, stream))
 	}
 
-	gl.Enable(gl.BLEND)
-	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 	gl.ClearColor(0, 0, 0, 0)
 	gl.Clear(gl.COLOR_BUFFER_BIT)
 

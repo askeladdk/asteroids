@@ -16,8 +16,8 @@ func (si StaticImage) Len() int {
 	return 1
 }
 
-func (si StaticImage) TintColorAt(i int) color.NRGBA {
-	return color.NRGBA{255, 255, 255, 255}
+func (si StaticImage) TintColorAt(i int) color.Color {
+	return color.RGBA{255, 255, 255, 255}
 }
 
 func (si StaticImage) TextureAt(i int) *graphics.Texture {

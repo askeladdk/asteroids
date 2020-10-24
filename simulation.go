@@ -118,8 +118,8 @@ func (s *Simulation) Len() int {
 	return len(s.Entities)
 }
 
-func (s *Simulation) TintColorAt(i int) color.NRGBA {
-	return color.NRGBA{0xff, 0xff, 0xff, 0xff}
+func (s *Simulation) TintColorAt(i int) color.Color {
+	return color.RGBA{0xff, 0xff, 0xff, 0xff}
 }
 
 func (s *Simulation) TextureAt(_ int) *graphics.Texture {
