@@ -20,7 +20,7 @@ func (si StaticImage) TintColorAt(i int) color.NRGBA {
 	return color.NRGBA{255, 255, 255, 255}
 }
 
-func (si StaticImage) Texture() *graphics.Texture {
+func (si StaticImage) TextureAt(i int) *graphics.Texture {
 	return si.Image.Texture()
 }
 

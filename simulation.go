@@ -122,7 +122,7 @@ func (s *Simulation) TintColorAt(i int) color.NRGBA {
 	return color.NRGBA{0xff, 0xff, 0xff, 0xff}
 }
 
-func (s *Simulation) Texture() *graphics.Texture {
+func (s *Simulation) TextureAt(_ int) *graphics.Texture {
 	return s.ImageAtlas
 }
 

@@ -148,7 +148,7 @@ func run(app pancake.App) error {
 	resolution := app.Resolution()
 	midscreen := mathx.FromPoint(resolution.Div(2))
 
-	drawer := graphics2d.NewDrawer(1024, graphics2d.Quad)
+	drawer := graphics2d.NewDrawer(1024, nil)
 	shader := graphics2d.DefaultShader()
 	shader.Begin()
 	shader.SetUniform("u_Projection", mathx.Ortho2D(

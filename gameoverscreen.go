@@ -53,11 +53,9 @@ func (s *GameOverScreen) Frame(ev pancake.FrameEvent) (Screen, error) {
 func (s *GameOverScreen) Draw(ev pancake.DrawEvent) error {
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 	s.Shader.Begin()
-	s.Drawer.Draw(
-		s.Background,
-		s.Title,
-		s.Text,
-	)
+	s.Drawer.Draw(s.Background)
+	s.Drawer.Draw(s.Title)
+	s.Drawer.Draw(s.Text)
 	s.Shader.End()
 	return nil
 }

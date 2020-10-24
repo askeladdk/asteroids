@@ -85,10 +85,9 @@ func (g *GameScreen) Draw(ev pancake.DrawEvent) error {
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 	g.Shader.Begin()
 	g.Sim.Alpha = ev.Alpha
-	g.Drawer.Draw(g.Background,
-		g.Sim,
-		g.Text,
-	)
+	g.Drawer.Draw(g.Background)
+	g.Drawer.Draw(g.Sim)
+	g.Drawer.Draw(g.Text)
 	g.Shader.End()
 	return nil
 }
