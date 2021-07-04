@@ -1,12 +1,9 @@
-//go:generate go-bindata -nocompress assets
-
 package main
 
 import (
-	"bytes"
+	"embed"
 	"fmt"
 	"image"
-	"io/ioutil"
 	"math/rand"
 	"time"
 
@@ -31,16 +28,19 @@ import (
 )
 
 var (
-	gameScreen     *GameScreen
-	gameOverScreen *GameOverScreen
-	titleScreen    *TitleScreen
-	nextScreen     *NextScreen
+	globalGameScreen     *gameScreen
+	globalGameOverScreen *gameOverScreen
+	globalTitleScreen    *titleScreen
+	globalNextScreen     *nextScreen
+
+	//go:embed assets/*
+	assets embed.FS
 )
 
 func loadTexture(filename string) (*graphics.Texture, error) {
-	if data, err := Asset(filename); err != nil {
+	if f, err := assets.Open(filename); err != nil {
 		return nil, err
-	} else if img, _, err := image.Decode(bytes.NewBuffer(data)); err != nil {
+	} else if img, _, err := image.Decode(f); err != nil {
 		return nil, err
 	} else {
 		return graphics.NewTextureFromImage(img, graphics.FilterNearest), nil
@@ -48,9 +48,9 @@ func loadTexture(filename string) (*graphics.Texture, error) {
 }
 
 func loadWav(filename string) (*beep.Buffer, error) {
-	if data, err := Asset(filename); err != nil {
+	if f, err := assets.Open(filename); err != nil {
 		return nil, err
-	} else if wav, fmt, err := wav.Decode(bytes.NewBuffer(data)); err != nil {
+	} else if wav, fmt, err := wav.Decode(f); err != nil {
 		return nil, err
 	} else {
 		buffer := beep.NewBuffer(fmt)
@@ -60,9 +60,9 @@ func loadWav(filename string) (*beep.Buffer, error) {
 }
 
 func loadMp3(filename string) (*beep.Buffer, error) {
-	if data, err := Asset(filename); err != nil {
+	if f, err := assets.Open(filename); err != nil {
 		return nil, err
-	} else if wav, fmt, err := mp3.Decode(ioutil.NopCloser(bytes.NewBuffer(data))); err != nil {
+	} else if wav, fmt, err := mp3.Decode(f); err != nil {
 		return nil, err
 	} else {
 		buffer := beep.NewBuffer(fmt)
@@ -80,65 +80,50 @@ func run(app pancake.App) error {
 	var sfxLaser *beep.Buffer
 	var sfxExplosion *beep.Buffer
 	var sfxBoing *beep.Buffer
+	var mp3 *beep.Buffer
+	var err error
 
 	speaker.Init(44100, beep.SampleRate(44100).N(time.Second/10))
 
 	rand.Seed(time.Now().Unix())
 
-	if tex, err := loadTexture("assets/asteroids-arcade.png"); err != nil {
+	if sheet, err = loadTexture("assets/asteroids-arcade.png"); err != nil {
 		return err
-	} else {
-		sheet = tex
 	}
 
-	if tex, err := loadTexture("assets/background.png"); err != nil {
+	if background, err = loadTexture("assets/background.png"); err != nil {
 		return err
-	} else {
-		background = tex
 	}
 
-	if tex, err := loadTexture("assets/gameover.png"); err != nil {
+	if gameover, err = loadTexture("assets/gameover.png"); err != nil {
 		return err
-	} else {
-		gameover = tex
 	}
 
-	if tex, err := loadTexture("assets/title.png"); err != nil {
+	if title, err = loadTexture("assets/title.png"); err != nil {
 		return err
-	} else {
-		title = tex
 	}
 
-	if tex, err := loadTexture("assets/nextlevel.png"); err != nil {
+	if nextlevel, err = loadTexture("assets/nextlevel.png"); err != nil {
 		return err
-	} else {
-		nextlevel = tex
 	}
 
-	if wav, err := loadWav("assets/Laser.wav"); err != nil {
+	if sfxLaser, err = loadWav("assets/Laser.wav"); err != nil {
 		return err
-	} else {
-		sfxLaser = wav
 	}
 
-	if wav, err := loadWav("assets/Explosion.wav"); err != nil {
+	if sfxExplosion, err = loadWav("assets/Explosion.wav"); err != nil {
 		return err
-	} else {
-		sfxExplosion = wav
 	}
 
-	if wav, err := loadWav("assets/Boing.wav"); err != nil {
+	if sfxBoing, err = loadWav("assets/Boing.wav"); err != nil {
 		return err
-	} else {
-		sfxBoing = wav
 	}
 
-	if mp3, err := loadMp3("assets/Bonkers-for-Arcades.mp3"); err != nil {
+	if mp3, err = loadMp3("assets/Bonkers-for-Arcades.mp3"); err != nil {
 		return err
-	} else {
-		stream := mp3.Streamer(0, mp3.Len())
-		speaker.Play(beep.Loop(-1, stream))
 	}
+	stream := mp3.Streamer(0, mp3.Len())
+	speaker.Play(beep.Loop(-1, stream))
 
 	gl.ClearColor(0, 0, 0, 0)
 	gl.Clear(gl.COLOR_BUFFER_BIT)
@@ -176,7 +161,7 @@ func run(app pancake.App) error {
 	text16 := text.NewText(font16)
 	text12 := text.NewText(font12)
 
-	simulation := Simulation{
+	simulation := theSimulation{
 		ImageAtlas: sheet,
 		Images: []graphics.Image{
 			sheet.SubImage(image.Rect(0, 0, 32, 32)),       // spaceship
@@ -193,75 +178,75 @@ func run(app pancake.App) error {
 			sfxBoing,
 		},
 		Bounds: mathx.Rectangle{
-			mathx.Vec2{},
-			mathx.FromPoint(resolution),
+			Min: mathx.Vec2{},
+			Max: mathx.FromPoint(resolution),
 		},
 	}
 
-	gameScreen = &GameScreen{
+	globalGameScreen = &gameScreen{
 		Sim:    &simulation,
 		Text:   text16,
 		Drawer: drawer,
 		Shader: shader,
-		Background: StaticImage{
+		Background: staticImage{
 			Image:    background,
 			Position: midscreen,
 		},
 	}
 
-	gameOverScreen = &GameOverScreen{
+	globalGameOverScreen = &gameOverScreen{
 		Sim:    &simulation,
 		Text:   text16,
 		Drawer: drawer,
 		Shader: shader,
-		Background: StaticImage{
+		Background: staticImage{
 			Image:    background,
 			Position: midscreen,
 		},
-		Title: StaticImage{
+		Title: staticImage{
 			Image:    gameover,
 			Position: midscreen,
 		},
 	}
 
-	titleScreen = &TitleScreen{
+	globalTitleScreen = &titleScreen{
 		Drawer: drawer,
 		Shader: shader,
 		Text:   text12,
-		Background: StaticImage{
+		Background: staticImage{
 			Image:    background,
 			Position: midscreen,
 		},
-		Title: StaticImage{
+		Title: staticImage{
 			Image:    title,
 			Position: midscreen,
 		},
 	}
 
-	nextScreen = &NextScreen{
+	globalNextScreen = &nextScreen{
 		Sim:    &simulation,
 		Text:   text16,
 		Drawer: drawer,
 		Shader: shader,
-		Background: StaticImage{
+		Background: staticImage{
 			Image:    background,
 			Position: midscreen,
 		},
-		Title: StaticImage{
+		Title: staticImage{
 			Image:    nextlevel,
 			Position: midscreen,
 		},
 	}
 
-	screenState := ScreenState{
-		Screen: TransitionScreen{
-			To: titleScreen,
+	sscreenState := screenState{
+		Screen: transitionScreen{
+			To: globalTitleScreen,
 		},
 	}
 
 	return app.Events(func(event interface{}) error {
 		app.SetTitle(fmt.Sprintf("Asteroids (%d FPS)", app.FrameRate()))
-		return screenState.Do(event)
+		return sscreenState.Do(event)
 	})
 }
 

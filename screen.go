@@ -2,32 +2,32 @@ package main
 
 import "github.com/askeladdk/pancake"
 
-type Screen interface {
+type screen interface {
 	Begin()
 	End()
 	Key(pancake.KeyEvent) error
 	Draw(pancake.DrawEvent) error
-	Frame(pancake.FrameEvent) (Screen, error)
+	Frame(pancake.FrameEvent) (screen, error)
 }
 
-type TransitionScreen struct {
-	To Screen
+type transitionScreen struct {
+	To screen
 }
 
-func (s TransitionScreen) Begin()                                      {}
-func (s TransitionScreen) End()                                        {}
-func (s TransitionScreen) Key(ev pancake.KeyEvent) error               { return nil }
-func (s TransitionScreen) Draw(ev pancake.DrawEvent) error             { return nil }
-func (s TransitionScreen) Frame(ev pancake.FrameEvent) (Screen, error) { return s.To, nil }
+func (s transitionScreen) Begin()                                      {}
+func (s transitionScreen) End()                                        {}
+func (s transitionScreen) Key(ev pancake.KeyEvent) error               { return nil }
+func (s transitionScreen) Draw(ev pancake.DrawEvent) error             { return nil }
+func (s transitionScreen) Frame(ev pancake.FrameEvent) (screen, error) { return s.To, nil }
 
-type ScreenState struct {
-	Screen Screen
+type screenState struct {
+	Screen screen
 }
 
-func (gs *ScreenState) Do(event interface{}) error {
+func (gs *screenState) Do(event interface{}) error {
 	switch ev := event.(type) {
 	case pancake.QuitEvent:
-		return pancake.Quit
+		return pancake.ErrQuit
 	case pancake.KeyEvent:
 		return gs.Screen.Key(ev)
 	case pancake.FrameEvent:

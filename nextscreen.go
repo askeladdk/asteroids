@@ -11,17 +11,17 @@ import (
 	"github.com/askeladdk/pancake/text"
 )
 
-type NextScreen struct {
-	Sim        *Simulation
+type nextScreen struct {
+	Sim        *theSimulation
 	Text       *text.Text
-	Background StaticImage
-	Title      StaticImage
+	Background staticImage
+	Title      staticImage
 	Drawer     *graphics2d.Drawer
 	Shader     *graphics.ShaderProgram
 	Start      bool
 }
 
-func (s *NextScreen) Begin() {
+func (s *nextScreen) Begin() {
 	s.Start = false
 	s.Sim.Level++
 
@@ -29,23 +29,23 @@ func (s *NextScreen) Begin() {
 	fmt.Fprintf(s.Text, "Level: %d\nScore: %d\nPress Enter to continue.", 1+s.Sim.Level, s.Sim.Score)
 }
 
-func (s *NextScreen) End() {}
+func (s *nextScreen) End() {}
 
-func (s *NextScreen) Key(ev pancake.KeyEvent) error {
+func (s *nextScreen) Key(ev pancake.KeyEvent) error {
 	if ev.Key == input.KeyEnter {
 		s.Start = true
 	}
 	return nil
 }
 
-func (s *NextScreen) Frame(ev pancake.FrameEvent) (Screen, error) {
+func (s *nextScreen) Frame(ev pancake.FrameEvent) (screen, error) {
 	if s.Start {
-		return gameScreen, nil
+		return globalGameScreen, nil
 	}
 	return nil, nil
 }
 
-func (s *NextScreen) Draw(ev pancake.DrawEvent) error {
+func (s *nextScreen) Draw(ev pancake.DrawEvent) error {
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 	s.Shader.Begin()
 	s.Drawer.Draw(s.Background)

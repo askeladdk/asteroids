@@ -11,26 +11,26 @@ import (
 	"github.com/askeladdk/pancake/text"
 )
 
-type GameScreen struct {
-	Sim        *Simulation
+type gameScreen struct {
+	Sim        *theSimulation
 	Text       *text.Text
 	Drawer     *graphics2d.Drawer
 	Shader     *graphics.ShaderProgram
-	Background StaticImage
+	Background staticImage
 	Keys       uint32
 }
 
-func (g *GameScreen) Begin() {
+func (g *gameScreen) Begin() {
 	g.Keys = 0
 	g.Sim.Reset()
 }
 
-func (g *GameScreen) End() {}
+func (g *gameScreen) End() {}
 
-func (g *GameScreen) Key(ev pancake.KeyEvent) error {
+func (g *gameScreen) Key(ev pancake.KeyEvent) error {
 	switch ev.Key {
 	case input.KeyEscape:
-		return pancake.Quit
+		return pancake.ErrQuit
 	case input.KeyA:
 		fallthrough
 	case input.KeyLeft:
@@ -49,28 +49,28 @@ func (g *GameScreen) Key(ev pancake.KeyEvent) error {
 		}
 	case input.KeySpace:
 		if ev.Flags.Pressed() {
-			g.Sim.Action(SHIPID, FIRE, 0)
+			g.Sim.Action(shipID, actionFire, 0)
 		}
 	}
 	return nil
 }
 
-func (g *GameScreen) Frame(ev pancake.FrameEvent) (Screen, error) {
+func (g *gameScreen) Frame(ev pancake.FrameEvent) (screen, error) {
 	switch g.Sim.State {
-	case GAMEOVER:
-		return gameOverScreen, nil
-	case NEXTLEVEL:
-		return nextScreen, nil
+	case stateGAMEOVER:
+		return globalGameOverScreen, nil
+	case stateNEXTLEVEL:
+		return globalNextScreen, nil
 	}
 
 	if g.Keys&3 == 1 {
-		g.Sim.Action(SHIPID, TURN, -1)
+		g.Sim.Action(shipID, actionTurn, -1)
 	} else if g.Keys&3 == 2 {
-		g.Sim.Action(SHIPID, TURN, +1)
+		g.Sim.Action(shipID, actionTurn, +1)
 	}
 
 	if g.Keys&4 != 0 {
-		g.Sim.Action(SHIPID, FORWARD, 1)
+		g.Sim.Action(shipID, actionForward, 1)
 	}
 
 	g.Sim.Frame(ev.DeltaTime)
@@ -81,7 +81,7 @@ func (g *GameScreen) Frame(ev pancake.FrameEvent) (Screen, error) {
 	return nil, nil
 }
 
-func (g *GameScreen) Draw(ev pancake.DrawEvent) error {
+func (g *gameScreen) Draw(ev pancake.DrawEvent) error {
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 	g.Shader.Begin()
 	g.Sim.Alpha = ev.Alpha
@@ -95,7 +95,6 @@ func (g *GameScreen) Draw(ev pancake.DrawEvent) error {
 func toggleFlag(flags uint32, flag uint32, state bool) uint32 {
 	if state {
 		return flags | flag
-	} else {
-		return flags &^ flag
 	}
+	return flags &^ flag
 }

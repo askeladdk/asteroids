@@ -13,16 +13,16 @@ import (
 	"github.com/askeladdk/pancake/text"
 )
 
-type TitleScreen struct {
-	Background StaticImage
-	Title      StaticImage
+type titleScreen struct {
+	Background staticImage
+	Title      staticImage
 	Drawer     *graphics2d.Drawer
 	Shader     *graphics.ShaderProgram
 	Text       *text.Text
 	Start      bool
 }
 
-func (s *TitleScreen) Begin() {
+func (s *titleScreen) Begin() {
 	s.Text.Clear()
 	s.Text.Pos = mathx.Vec2{4, 360 - 5*s.Text.LineHeight - 4}
 	fmt.Fprintf(s.Text, "Music by Eric Matyas (www.soundimage.org)\n")
@@ -32,28 +32,28 @@ func (s *TitleScreen) Begin() {
 	fmt.Fprintf(s.Text, "Programmed by Askeladd (github.com/askeladdk/asteroids)")
 }
 
-func (s *TitleScreen) End() {
+func (s *titleScreen) End() {
 	s.Text.Pos[1] = 0
 }
 
-func (s *TitleScreen) Key(ev pancake.KeyEvent) error {
+func (s *titleScreen) Key(ev pancake.KeyEvent) error {
 	switch ev.Key {
 	case input.KeyEscape:
-		return pancake.Quit
+		return pancake.ErrQuit
 	default:
 		s.Start = true
 		return nil
 	}
 }
 
-func (s *TitleScreen) Frame(ev pancake.FrameEvent) (Screen, error) {
+func (s *titleScreen) Frame(ev pancake.FrameEvent) (screen, error) {
 	if s.Start {
-		return gameScreen, nil
+		return globalGameScreen, nil
 	}
 	return nil, nil
 }
 
-func (s *TitleScreen) Draw(ev pancake.DrawEvent) error {
+func (s *titleScreen) Draw(ev pancake.DrawEvent) error {
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 	s.Shader.Begin()
 	s.Drawer.Draw(s.Background)
